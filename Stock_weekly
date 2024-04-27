@@ -1,0 +1,108 @@
+from Parse_QJigou import get_today_jigou
+from Parse_Dlonghu import get_today_longhu
+from Pro_ReportPrice import pro_report, pro_price
+import pandas as pd
+import re
+
+now_period = '2023-12-31'
+
+jg = get_today_jigou(now_period)
+# jg = pd.read_excel(r'jg.xlsx')
+print('社保')
+
+lh = get_today_longhu()
+# lh = pd.read_excel(r'lh.xlsx')
+print('龙虎榜')
+
+yj = pro_report(now_period)
+# yj = pd.read_excel(r'yj.xlsx')
+print('业绩')
+
+pr = pro_price()
+# pr = pd.read_excel(r'pr.xlsx')
+print('价格')
+
+if len(pr) > len(yj):
+    df = pr.merge(yj, on=['证券代码', '证券简称'], how='left')
+else:
+    df = pr.merge(yj, on=['证券代码', '证券简称'], how='right')
+
+df = df.merge(lh, on=['证券代码', '证券简称'], how='left')
+df = df.merge(jg, on=['证券代码', '证券简称'], how='left')
+
+# indexnum = []
+# for i in range(len(df)):
+#     if not re.match('.*ST.*', df.iloc[i]['证券简称']):
+#         indexnum.append(i)
+# df = df.iloc[indexnum]  # 剔除ST
+df['jg_num'] = df['jg_num'].fillna(0)
+
+df = df[['证券代码', '证券简称', '中信二级', 'yj_type', 'yj_type_nan', 'jg_num', 'jg_chg', 'qs_type', 'sl_type',
+         '总市值（亿）', '十大流通股比例（%）', 'strength120', 'strength250',
+         '最新报告期', '实际披露期', '预告报告期', '预告披露期', '快报披露期', '正式报告/快报/预告',
+         '上一期净利润同比', '本期净利润同比', '上一期扣非净利润同比', '本期扣非净利润同比', '扣非净利润ttm（亿）', 'Pettm',
+         '上榜日期', '买方机构数', '卖方机构数', '买入净额（万元）']].reset_index(drop=True)
+df.columns = ['个股代码', '个股名称', '中信二级', '业绩类型', '业绩（扣非）类型', '社保家数', '社保变动方向', '趋势类型', '收敛类型', '总市值（亿）', '十大流通股比例（%）',
+              '120股价强度', '250股价强度', '最新报告期', '实际披露期', '预告报告期', '预告披露期', '快报披露期', '正式报告/快报/预告',
+              '上一期净利润同比', '本期净利润同比', '上一期扣非净利润同比', '本期扣非净利润同比', '扣非净利润ttm（亿）', 'Pettm',
+              '龙虎榜上榜日期', '龙虎榜买方机构总数', '龙虎榜卖方机构总数', '净买入金额（万元）']
+df.to_excel(r'每日选股池.xlsx', index=False)
+#
+# df0 = pd.read_excel(r'机构增持' + now_period + '.xlsx')
+#
+# df1 = df[(df['社保家数'] > 0) & (df['净买入金额（万元）'] > 0)].copy()  # 社保龙虎榜
+# df2 = df[(df['社保家数'] > 0) & (df['业绩类型'] > 0) & (df['业绩（扣非）类型'] > 0) & (
+#         (df['净买入金额（万元）'].isnull()) | (df['净买入金额（万元）'] > 0))].copy()  # 业绩社保
+# df3 = df[(df['净买入金额（万元）'] > 0) & (df['业绩类型'] > 0) & (df['业绩（扣非）类型'] > 0)].copy()  # 业绩龙虎榜
+# df4 = df[(df['业绩类型'] > 0) & (df['业绩（扣非）类型'] > 0) & (df['趋势类型'] > 0) & (df['收敛类型'] > 0) & (df['120股价强度'] > 80) & (
+#         df['250股价强度'] > 70) & (df['扣非净利润ttm（亿）'] > 0) & (
+#                  (df['净买入金额（万元）'].isnull()) | (df['净买入金额（万元）'] > 0))].copy()  # 业绩
+# df5 = df0[(df0['机构类型'] == '社保') & (df0['持有家数'] > 1) & (df0['占总股本比例（%）'] > 1) & (df0['变动比例（%）'] > 50)].copy()  # 社保增持
+# df6 = df[
+#     (df['业绩类型'] > 0) & (df['业绩（扣非）类型'] > 0) & (df['120股价强度'] > df['250股价强度']) & (df['趋势类型'] > 0) & (
+#             df['收敛类型'] > 0) & (df['120股价强度'] > 80) & (df['250股价强度'] > 70) & (df['扣非净利润ttm（亿）'] > 0) & (
+#             (df['净买入金额（万元）'].isnull()) | (df['净买入金额（万元）'] > 0)) & (df['社保家数'] > 0)].copy()  # temp
+#
+# writer = pd.ExcelWriter(r'每日选股池-细分.xlsx')
+# df1.to_excel(writer, sheet_name='社保龙虎榜', index=False)
+# df2.to_excel(writer, sheet_name='业绩社保', index=False)
+# df3.to_excel(writer, sheet_name='业绩龙虎榜', index=False)
+# df5.to_excel(writer, sheet_name='社保增持', index=False)
+# df4.to_excel(writer, sheet_name='业绩', index=False)
+# df6.to_excel(writer, sheet_name='temp', index=False)
+# writer.close()
+
+
+#
+# import smtplib
+# from email.mime.multipart import MIMEMultipart
+# from email.mime.application import MIMEApplication
+#
+#
+# def sendemail(subject):
+#     '''发送邮件'''
+#
+#     sender = '13370291206@163.com'  # 发件人邮箱账号
+#     password = 'lqq14159'  # 发件人邮箱密码需要进账号页面自己设置开启smtp,才能获取到密码
+#
+#     receiver = ['13370291206@163.com']  # 收件人邮箱账号
+#     mailall = MIMEMultipart()
+#     mailall['Subject'] = subject  # 记住一定要设置
+#     mailall['From'] = sender  # 发件人邮箱
+#     mailall['To'] = ';'.join(receiver)  # 收件人邮箱,不同收件人邮箱之间用;分割
+#     # mailall['CC'] = ';'.join(copyRecieve)  # 收件人邮箱,不同收件人邮箱之间用;分割
+#     xlsxpart = MIMEApplication(open("%s.xlsx" % (subject), 'rb').read())
+#     xlsxpart.add_header('Content-Disposition', 'attachment',
+#                         filename=('gbk', '', "%s.xlsx" % (subject)))
+#     mailall.attach(xlsxpart)
+#
+#     smtp = smtplib.SMTP()
+#     smtp.connect('smtp.163.com')
+#     smtp.login(sender, password)
+#
+#     smtp.sendmail(sender, receiver, mailall.as_string())  # 发送的时候需要将收件人和抄送者全部添加到函数第二个参数里
+#     smtp.quit()
+#
+#
+# sendemail('每日选股池')
+# sendemail('每日选股池-细分')
